@@ -65,7 +65,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pydantic models
+# Updated Pydantic models with range parameters
 class PredictionRequest(BaseModel):
     student_rank: int
     quota: str
@@ -73,6 +73,8 @@ class PredictionRequest(BaseModel):
     seat_type: str
     round_no: str
     min_probability: float = 0.0
+    rank_range_lower: int = 1000  # How many ranks below student rank to consider
+    rank_range_upper: int = 3000  # How many ranks above student rank to consider
 
 class PredictionResponse(BaseModel):
     preferences: List[dict]
@@ -148,7 +150,7 @@ async def get_rounds():
 
 @app.post("/api/predict", response_model=PredictionResponse)
 async def predict_preferences(request: PredictionRequest):
-    """Generate college preferences based on input criteria"""
+    """Generate college preferences based on input criteria with customizable rank range"""
     try:
         from .utils import validate_inputs, generate_preference_list
         
@@ -163,17 +165,43 @@ async def predict_preferences(request: PredictionRequest):
         if not is_valid:
             raise HTTPException(status_code=400, detail=error_message)
 
-        # Generate preferences
+        # Additional validation for range parameters
+        if request.rank_range_lower < 0:
+            raise HTTPException(status_code=400, detail="Safe range (rank_range_lower) must be non-negative")
+        
+        if request.rank_range_upper < 0:
+            raise HTTPException(status_code=400, detail="Stretch range (rank_range_upper) must be non-negative")
+        
+        if request.rank_range_lower > 5000:
+            raise HTTPException(status_code=400, detail="Safe range too large (maximum 5000)")
+            
+        if request.rank_range_upper > 10000:
+            raise HTTPException(status_code=400, detail="Stretch range too large (maximum 10000)")
+
+        # Log the request parameters for debugging
+        print(f"Processing prediction request:")
+        print(f"  Student Rank: {request.student_rank}")
+        print(f"  Safe Range: {request.rank_range_lower} ranks below")
+        print(f"  Stretch Range: {request.rank_range_upper} ranks above")
+        print(f"  Search Range: {max(1, request.student_rank - request.rank_range_lower)} to {request.student_rank + request.rank_range_upper}")
+        print(f"  Quota: {request.quota}, Category: {request.category}")
+        print(f"  Seat Type: {request.seat_type}, Round: {request.round_no}")
+        print(f"  Min Probability: {request.min_probability}%")
+
+        # Generate preferences with the new range parameters
         result_df, plot_data = generate_preference_list(
             student_rank=request.student_rank,
             quota=request.quota,
             category=request.category,
             seat_type=request.seat_type,
             round_no=request.round_no,
-            min_probability=request.min_probability
+            min_probability=request.min_probability,
+            rank_range_lower=request.rank_range_lower,
+            rank_range_upper=request.rank_range_upper
         )
 
         if result_df.empty:
+            print("No results found - returning empty response")
             return PredictionResponse(
                 preferences=[],
                 plot_data={"x": [], "type": "histogram", "nbinsx": 20}
@@ -182,11 +210,62 @@ async def predict_preferences(request: PredictionRequest):
         # Convert results to response format
         preferences = result_df.to_dict('records')
         
+        print(f"Returning {len(preferences)} college preferences")
+        
         return PredictionResponse(
             preferences=preferences,
             plot_data=plot_data
         )
 
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        print(f"Error in predict_preferences: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+# Optional: Add a new endpoint to get range recommendations based on rank
+@app.get("/api/range-recommendations/{student_rank}")
+async def get_range_recommendations(student_rank: int):
+    """Get recommended search ranges based on student rank"""
+    try:
+        if student_rank <= 0:
+            raise HTTPException(status_code=400, detail="Student rank must be positive")
+        
+        # Provide different range recommendations based on rank
+        if student_rank <= 1000:
+            # Top ranks - can be more conservative
+            safe_range = 500
+            stretch_range = 2000
+            strategy = "conservative"
+        elif student_rank <= 5000:
+            # Good ranks - balanced approach
+            safe_range = 1000
+            stretch_range = 3000
+            strategy = "balanced"
+        elif student_rank <= 20000:
+            # Average ranks - standard approach
+            safe_range = 1500
+            stretch_range = 4000
+            strategy = "standard"
+        else:
+            # Higher ranks - more aggressive needed
+            safe_range = 2000
+            stretch_range = 5000
+            strategy = "aggressive"
+        
+        return {
+            "student_rank": student_rank,
+            "recommended_safe_range": safe_range,
+            "recommended_stretch_range": stretch_range,
+            "strategy": strategy,
+            "search_range": {
+                "min_cutoff": max(1, student_rank - safe_range),
+                "max_cutoff": student_rank + stretch_range
+            },
+            "description": f"For rank {student_rank}, we recommend a {strategy} approach"
+        }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
