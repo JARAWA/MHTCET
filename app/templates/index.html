@@ -145,7 +145,43 @@
         
         #usage-info {
             margin-left: 15px;
-        }    
+        }
+
+        /* Range Configuration Styles */
+        .range-config-section {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .range-config-section h6 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .range-preview {
+            background-color: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .range-preview strong {
+            color: var(--primary-color);
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -253,6 +289,50 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- NEW: Range Configuration Section -->
+                    <div class="range-config-section">
+                        <h6><i class="fas fa-sliders-h"></i> Cutoff Range Configuration</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="rank-range-lower" class="form-label">
+                                    <i class="fas fa-shield-alt text-success"></i> Safe Range: <span id="lower-range-value">1000</span> ranks below
+                                </label>
+                                <input type="range" class="form-range" id="rank-range-lower" name="rank-range-lower"
+                                       min="500" max="2000" step="100" value="1000"
+                                       data-bs-toggle="tooltip" data-bs-placement="top"
+                                       title="How many ranks below your rank to include (safer colleges with higher admission chances)">
+                                <div class="range-labels">
+                                    <span>500</span>
+                                    <span>More Safe Colleges</span>
+                                    <span>2000</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="rank-range-upper" class="form-label">
+                                    <i class="fas fa-rocket text-warning"></i> Stretch Range: <span id="upper-range-value">3000</span> ranks above
+                                </label>
+                                <input type="range" class="form-range" id="rank-range-upper" name="rank-range-upper"
+                                       min="1000" max="5000" step="250" value="3000"
+                                       data-bs-toggle="tooltip" data-bs-placement="top"
+                                       title="How many ranks above your rank to include (stretch colleges with lower admission chances)">
+                                <div class="range-labels">
+                                    <span>1000</span>
+                                    <span>More Stretch Colleges</span>
+                                    <span>5000</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="range-preview">
+                            🎯 <strong>Search Range:</strong> Colleges with cutoffs between 
+                            <strong id="cutoff-min-display">N/A</strong> and 
+                            <strong id="cutoff-max-display">N/A</strong>
+                            <br>
+                            <small class="text-muted">
+                                (<span id="display-lower">1000</span> ranks below your rank to <span id="display-upper">3000</span> ranks above)
+                            </small>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="button-row">
@@ -334,10 +414,25 @@
                         </ul>
                     </li>
                     <li>Choose the counselling round (1, 2, or 3)</li>
+                    <li><strong>NEW:</strong> Configure your search range:
+                        <ul>
+                            <li><strong>Safe Range:</strong> How many ranks below your rank to include (colleges easier to get into)</li>
+                            <li><strong>Stretch Range:</strong> How many ranks above your rank to include (aspirational colleges)</li>
+                        </ul>
+                    </li>
                     <li>Set minimum admission probability threshold</li>
                     <li>Click on "Generate Preferences"</li>
                     <li>Use the Download Excel button to save the results</li>
                 </ol>
+
+                <h3>🎯 Understanding the Range Configuration:</h3>
+                <ul>
+                    <li><strong>Safe Range (Green):</strong> Colleges with cutoffs below your rank - higher admission chances</li>
+                    <li><strong>Stretch Range (Orange):</strong> Colleges with cutoffs above your rank - aspirational options</li>
+                    <li><strong>Balanced Approach:</strong> Use default settings (1000 below, 3000 above) for a good mix</li>
+                    <li><strong>Conservative Approach:</strong> Increase safe range, decrease stretch range</li>
+                    <li><strong>Aggressive Approach:</strong> Decrease safe range, increase stretch range</li>
+                </ul>
 
                 <h3>⚠️ Disclaimer:</h3>
                 <ul>
@@ -357,6 +452,58 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <!-- Range Configuration JavaScript -->
+    <script>
+        // Handle range input changes
+        function handleLowerRangeChange(event) {
+            const value = event.target.value;
+            document.getElementById('lower-range-value').textContent = value;
+            document.getElementById('display-lower').textContent = value;
+            updateRangeDisplay();
+        }
+
+        function handleUpperRangeChange(event) {
+            const value = event.target.value;
+            document.getElementById('upper-range-value').textContent = value;
+            document.getElementById('display-upper').textContent = value;
+            updateRangeDisplay();
+        }
+
+        function updateRangeDisplay() {
+            const studentRankInput = document.getElementById('student-rank');
+            const lowerRange = parseInt(document.getElementById('rank-range-lower').value);
+            const upperRange = parseInt(document.getElementById('rank-range-upper').value);
+            
+            if (studentRankInput.value) {
+                const studentRank = parseInt(studentRankInput.value);
+                const minCutoff = Math.max(1, studentRank - lowerRange);
+                const maxCutoff = studentRank + upperRange;
+                
+                document.getElementById('cutoff-min-display').textContent = minCutoff.toLocaleString();
+                document.getElementById('cutoff-max-display').textContent = maxCutoff.toLocaleString();
+            } else {
+                document.getElementById('cutoff-min-display').textContent = 'Enter your rank first';
+                document.getElementById('cutoff-max-display').textContent = 'Enter your rank first';
+            }
+        }
+
+        // Update range display when student rank changes
+        function handleStudentRankChange(event) {
+            updateRangeDisplay();
+        }
+
+        // Initialize range display
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listeners for range inputs
+            document.getElementById('rank-range-lower').addEventListener('input', handleLowerRangeChange);
+            document.getElementById('rank-range-upper').addEventListener('input', handleUpperRangeChange);
+            document.getElementById('student-rank').addEventListener('input', handleStudentRankChange);
+            
+            // Initialize display
+            updateRangeDisplay();
+        });
+    </script>
 
     <!-- Authentication initialization script -->
     <script>
