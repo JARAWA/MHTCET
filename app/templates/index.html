@@ -290,37 +290,39 @@
                         </div>
                     </div>
 
-                    <!-- NEW: Range Configuration Section -->
+                    <!-- CORRECTED: Range Configuration Section -->
                     <div class="range-config-section">
                         <h6><i class="fas fa-sliders-h"></i> Cutoff Range Configuration</h6>
                         <div class="row">
                             <div class="col-md-6">
                                 <label for="rank-range-lower" class="form-label">
-                                    <i class="fas fa-shield-alt text-success"></i> Safe Range: <span id="lower-range-value">1000</span> ranks below
+                                    <i class="fas fa-rocket text-warning"></i> Stretch Range: <span id="lower-range-value">1000</span> ranks better
                                 </label>
                                 <input type="range" class="form-range" id="rank-range-lower" name="rank-range-lower"
                                        min="500" max="2000" step="100" value="1000"
                                        data-bs-toggle="tooltip" data-bs-placement="top"
-                                       title="How many ranks below your rank to include (safer colleges with higher admission chances)">
+                                       title="How many ranks better than yours to include (aspirational colleges with lower admission chances)">
                                 <div class="range-labels">
                                     <span>500</span>
-                                    <span>More Safe Colleges</span>
+                                    <span>More Aspirational Colleges</span>
                                     <span>2000</span>
                                 </div>
+                                <small class="text-muted">Colleges with cutoff ranks lower than yours (harder to get into)</small>
                             </div>
                             <div class="col-md-6">
                                 <label for="rank-range-upper" class="form-label">
-                                    <i class="fas fa-rocket text-warning"></i> Stretch Range: <span id="upper-range-value">3000</span> ranks above
+                                    <i class="fas fa-shield-alt text-success"></i> Safe Range: <span id="upper-range-value">3000</span> ranks worse
                                 </label>
                                 <input type="range" class="form-range" id="rank-range-upper" name="rank-range-upper"
                                        min="1000" max="5000" step="250" value="3000"
                                        data-bs-toggle="tooltip" data-bs-placement="top"
-                                       title="How many ranks above your rank to include (stretch colleges with lower admission chances)">
+                                       title="How many ranks worse than yours to include (safer colleges with higher admission chances)">
                                 <div class="range-labels">
                                     <span>1000</span>
-                                    <span>More Stretch Colleges</span>
+                                    <span>More Safe Colleges</span>
                                     <span>5000</span>
                                 </div>
+                                <small class="text-muted">Colleges with cutoff ranks higher than yours (easier to get into)</small>
                             </div>
                         </div>
                         <div class="range-preview">
@@ -329,7 +331,7 @@
                             <strong id="cutoff-max-display">N/A</strong>
                             <br>
                             <small class="text-muted">
-                                (<span id="display-lower">1000</span> ranks below your rank to <span id="display-upper">3000</span> ranks above)
+                                (From <span id="display-lower">1000</span> ranks better to <span id="display-upper">3000</span> ranks worse than your rank)
                             </small>
                         </div>
                     </div>
@@ -414,10 +416,10 @@
                         </ul>
                     </li>
                     <li>Choose the counselling round (1, 2, or 3)</li>
-                    <li><strong>NEW:</strong> Configure your search range:
+                    <li><strong>UPDATED:</strong> Configure your search range:
                         <ul>
-                            <li><strong>Safe Range:</strong> How many ranks below your rank to include (colleges easier to get into)</li>
-                            <li><strong>Stretch Range:</strong> How many ranks above your rank to include (aspirational colleges)</li>
+                            <li><strong>Stretch Range:</strong> How many ranks better than yours to include (aspirational colleges with lower admission chances)</li>
+                            <li><strong>Safe Range:</strong> How many ranks worse than yours to include (safer colleges with higher admission chances)</li>
                         </ul>
                     </li>
                     <li>Set minimum admission probability threshold</li>
@@ -427,11 +429,23 @@
 
                 <h3>🎯 Understanding the Range Configuration:</h3>
                 <ul>
-                    <li><strong>Safe Range (Green):</strong> Colleges with cutoffs below your rank - higher admission chances</li>
-                    <li><strong>Stretch Range (Orange):</strong> Colleges with cutoffs above your rank - aspirational options</li>
-                    <li><strong>Balanced Approach:</strong> Use default settings (1000 below, 3000 above) for a good mix</li>
-                    <li><strong>Conservative Approach:</strong> Increase safe range, decrease stretch range</li>
-                    <li><strong>Aggressive Approach:</strong> Decrease safe range, increase stretch range</li>
+                    <li><strong>Stretch Range (Orange 🚀):</strong> Colleges with cutoffs better than your rank - aspirational options with lower admission chances</li>
+                    <li><strong>Safe Range (Green 🛡️):</strong> Colleges with cutoffs worse than your rank - safer options with higher admission chances</li>
+                    <li><strong>Balanced Approach:</strong> Use default settings (1000 better, 3000 worse) for a good mix</li>
+                    <li><strong>Conservative Approach:</strong> Decrease stretch range, increase safe range</li>
+                    <li><strong>Aggressive Approach:</strong> Increase stretch range, decrease safe range</li>
+                </ul>
+
+                <h3>🔢 Understanding Rank Numbers:</h3>
+                <ul>
+                    <li><strong>Lower rank numbers (e.g., Rank 100):</strong> Better performance, harder to achieve</li>
+                    <li><strong>Higher rank numbers (e.g., Rank 1000):</strong> Relatively lower performance, easier to achieve</li>
+                    <li><strong>Example:</strong> If your rank is 5000:
+                        <ul>
+                            <li>Stretch range of 1000 = colleges with cutoffs 4000-5000 (better/harder)</li>
+                            <li>Safe range of 3000 = colleges with cutoffs 5000-8000 (worse/easier)</li>
+                        </ul>
+                    </li>
                 </ul>
 
                 <h3>⚠️ Disclaimer:</h3>
@@ -453,9 +467,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-    <!-- Range Configuration JavaScript -->
+    <!-- CORRECTED: Range Configuration JavaScript -->
     <script>
-        // Handle range input changes
+        // CORRECTED: Handle range input changes with proper nomenclature
         function handleLowerRangeChange(event) {
             const value = event.target.value;
             document.getElementById('lower-range-value').textContent = value;
@@ -470,15 +484,16 @@
             updateRangeDisplay();
         }
 
+        // CORRECTED: Updated range calculation logic
         function updateRangeDisplay() {
             const studentRankInput = document.getElementById('student-rank');
-            const lowerRange = parseInt(document.getElementById('rank-range-lower').value);
-            const upperRange = parseInt(document.getElementById('rank-range-upper').value);
+            const stretchRange = parseInt(document.getElementById('rank-range-lower').value);  // Better ranks (lower numbers)
+            const safeRange = parseInt(document.getElementById('rank-range-upper').value);     // Worse ranks (higher numbers)
             
             if (studentRankInput.value) {
                 const studentRank = parseInt(studentRankInput.value);
-                const minCutoff = Math.max(1, studentRank - lowerRange);
-                const maxCutoff = studentRank + upperRange;
+                const minCutoff = Math.max(1, studentRank - stretchRange);  // Better cutoff ranks (lower numbers)
+                const maxCutoff = studentRank + safeRange;                  // Worse cutoff ranks (higher numbers)
                 
                 document.getElementById('cutoff-min-display').textContent = minCutoff.toLocaleString();
                 document.getElementById('cutoff-max-display').textContent = maxCutoff.toLocaleString();
