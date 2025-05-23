@@ -47,6 +47,42 @@ function handleProbabilityChange(event) {
     document.getElementById('prob-value').textContent = event.target.value;
 }
 
+function handleLowerRangeChange(event) {
+    const value = event.target.value;
+    document.getElementById('lower-range-value').textContent = value;
+    document.getElementById('display-lower').textContent = value;
+    updateRangeDisplay();
+}
+
+function handleUpperRangeChange(event) {
+    const value = event.target.value;
+    document.getElementById('upper-range-value').textContent = value;
+    document.getElementById('display-upper').textContent = value;
+    updateRangeDisplay();
+}
+
+function updateRangeDisplay() {
+    const studentRankInput = document.getElementById('student-rank');
+    const lowerRange = parseInt(document.getElementById('rank-range-lower').value);
+    const upperRange = parseInt(document.getElementById('rank-range-upper').value);
+    
+    if (studentRankInput.value) {
+        const studentRank = parseInt(studentRankInput.value);
+        const minCutoff = Math.max(1, studentRank - lowerRange);
+        const maxCutoff = studentRank + upperRange;
+        
+        document.getElementById('cutoff-min-display').textContent = minCutoff.toLocaleString();
+        document.getElementById('cutoff-max-display').textContent = maxCutoff.toLocaleString();
+    } else {
+        document.getElementById('cutoff-min-display').textContent = 'Enter your rank first';
+        document.getElementById('cutoff-max-display').textContent = 'Enter your rank first';
+    }
+}
+
+function handleStudentRankChange(event) {
+    updateRangeDisplay();
+}
+
 function initializeTooltips() {
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipInstances = tooltipTriggerList.map(function(tooltipTriggerEl) {
@@ -180,11 +216,19 @@ function initializeEventListeners() {
     // Probability slider
     document.getElementById('min-prob').addEventListener('input', handleProbabilityChange);
     
+    // Range sliders
+    document.getElementById('rank-range-lower').addEventListener('input', handleLowerRangeChange);
+    document.getElementById('rank-range-upper').addEventListener('input', handleUpperRangeChange);
+    document.getElementById('student-rank').addEventListener('input', handleStudentRankChange);
+    
     // Download button
     document.getElementById('download-btn').addEventListener('click', handleDownload);
     
     // Initialize table header click events for sorting
     initializeTableSorting();
+    
+    // Initialize range display
+    updateRangeDisplay();
 }
 
 // Initialize table sorting
@@ -289,7 +333,10 @@ async function handleFormSubmit(event) {
         category: document.getElementById('category').value,
         seat_type: document.getElementById('seat-type').value,
         round_no: document.getElementById('round-no').value,
-        min_probability: parseFloat(document.getElementById('min-prob').value)
+        min_probability: parseFloat(document.getElementById('min-prob').value),
+        // NEW: Add the range parameters
+        rank_range_lower: parseInt(document.getElementById('rank-range-lower').value),
+        rank_range_upper: parseInt(document.getElementById('rank-range-upper').value)
     };
 
     try {
@@ -328,7 +375,7 @@ async function handleFormSubmit(event) {
 // Response Handler
 function handlePredictionResponse(data) {
     if (!data.preferences || data.preferences.length === 0) {
-        showError('No colleges found matching your criteria.');
+        showError('No colleges found matching your criteria. Try adjusting your range or probability threshold.');
         return;
     }
 
@@ -340,6 +387,20 @@ function handlePredictionResponse(data) {
     currentSortColumn = null;
     isAscending = true;
     updateSortIndicators(-1, true);
+    
+    // Show success message with result count
+    const successAlert = document.createElement('div');
+    successAlert.className = 'alert alert-success alert-dismissible fade show';
+    successAlert.innerHTML = `
+        <strong>Success!</strong> Found ${data.preferences.length} college options matching your criteria.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    document.getElementById('error-alert-container').appendChild(successAlert);
+    
+    setTimeout(() => {
+        successAlert.classList.remove('show');
+        setTimeout(() => successAlert.remove(), 150);
+    }, 4000);
 }
 
 // Results Display
@@ -356,10 +417,14 @@ function displayResults(data) {
         
         // Determine row color based on probability
         const probability = parseFloat(pref['Admission Probability (%)']);
-        if (probability >= 80) {
+        if (probability >= 85) {
             row.classList.add('table-success');
+        } else if (probability >= 70) {
+            row.classList.add('table-info');
         } else if (probability >= 50) {
             row.classList.add('table-warning');
+        } else if (probability >= 30) {
+            row.classList.add('table-secondary');
         } else if (probability > 0) {
             row.classList.add('table-danger');
         }
@@ -435,7 +500,12 @@ function handleDownload() {
             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
         });
         
-        saveAs(blob, `MHTCET_Preferences_${new Date().toISOString().split('T')[0]}.xlsx`);
+        const studentRank = document.getElementById('student-rank').value;
+        const lowerRange = document.getElementById('rank-range-lower').value;
+        const upperRange = document.getElementById('rank-range-upper').value;
+        const fileName = `MHTCET_Preferences_Rank${studentRank}_Range${lowerRange}-${upperRange}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        
+        saveAs(blob, fileName);
     } catch (error) {
         showError('Failed to download Excel file');
         console.error('Download error:', error);
@@ -449,6 +519,15 @@ function validateForm() {
         form.classList.add('was-validated');
         return false;
     }
+    
+    // Additional custom validation
+    const studentRank = parseInt(document.getElementById('student-rank').value);
+    const lowerRange = parseInt(document.getElementById('rank-range-lower').value);
+    
+    if (studentRank <= lowerRange) {
+        showError('Warning: Your rank is very close to or below the safe range. Consider adjusting the range settings.');
+    }
+    
     return true;
 }
 
