@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MHTCET College Preference List Generator - Get personalized college recommendations with admission probability predictions">
+    <title>MHTCET College Preference List Generator</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/favicon.ico') }}">
+    
+    <!-- CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', path='/css/main.css') }}" rel="stylesheet">
+
+    <!-- Hash Tracker for Debugging -->
+    <script src="{{ url_for('static', path='/js/hash-tracker.js') }}" defer></script>
+    <!-- Capture initial state immediately -->
+    <script>
+    (function captureInitialState() {
+        window._initialHash = window.location.hash;
+        window._initialUrl = window.location.href;
+        window._pageLoadTime = Date.now();
+        console.log('📍 Initial state captured:', { 
+            hash: window._initialHash,
+            url: window._initialUrl,
+            time: new Date(_pageLoadTime).toISOString()
+        });
+        
+        // Store in sessionStorage for persistence across page reloads
+        try {
+            sessionStorage.setItem('initial_hash', window._initialHash);
+            sessionStorage.setItem('initial_url', window._initialUrl);
+            sessionStorage.setItem('page_load_time', window._pageLoadTime);
+        } catch(e) {
+            console.error('Error storing initial state:', e);
+        }
+    })();
+    </script>
+    
+    <!-- Preload critical resources -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.plot.ly">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Authentication error styles -->
+    <style>
+        .auth-error {
+            display: none;
+            font-family: 'Poppins', sans-serif;
+            max-width: 500px;
+            margin: 100px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .auth-error h2 {
+            color: #e53935;
+            margin-bottom: 20px;
+        }
+        .auth-error a {
+            color: #1e88e5;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        #error-alert-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1060;
+            width: 90%;
+            max-width: 600px;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1050;
+        }
+
+        #remaining-uses-counter {
+            font-size: 0.9rem;
+            padding: 5px 10px;
+            text-align: center;
+            border-radius: 4px;
+            margin-top: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .button-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .usage-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background-color: #e9ecef;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        
+        .unlimited-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background-color: #d1e7dd;
+            color: #0f5132;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        
+        .low-usage {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+        
+        .medium-usage {
+            background-color: #fff3cd;
+            color: #664d03;
+        }
+        
+        #usage-info {
+            margin-left: 15px;
+        }    
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="auth-loading" class="loading-overlay">
+        <div class="d-flex flex-column align-items-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Verifying authentication...</p>
+        </div>
+    </div>
+
+    <!-- Error Alert Container -->
+    <div id="error-alert-container"></div>
+
+    <!-- Authentication error container -->
+    <div id="auth-error-container" class="auth-error"></div>
+
+    <!-- Main Content Container -->
+    <div id="main-content" style="display: none;">
+        <div class="container py-4">
+            <div class="main-header">
+                <h1 class="text-center">🎓 MHTCET College Preference List Generator</h1>
+                <h3 class="text-center">Get personalized college recommendations with admission probability predictions</h3>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="bg-white shadow-md mb-4">
+                <div class="container px-4">
+                    <div class="flex items-center justify-between h-16">
+                        <div class="d-flex align-items-center">
+                            <a href="https://nextstepedu.co.in" class="d-flex align-items-center text-decoration-none">
+                                <img src="{{ url_for('static', path='/nextstep_logo.jpeg') }}" alt="Logo" class="h-8" style="height: 32px; width: auto;">
+                                <span class="ms-2 fw-bold fs-4">NextStep</span>
+                            </a>
+                            <div id="usage-info" class="nav-link"></div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <form id="preference-form" class="needs-validation" novalidate>
+                <div class="input-section">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="student-rank" class="form-label">Enter your MHTCET Rank</label>
+                                <input type="number" class="form-control" id="student-rank" name="student-rank"
+                                       min="1" required placeholder="Enter your MHTCET rank"
+                                       data-bs-toggle="tooltip" data-bs-placement="top"
+                                       title="Enter your MHTCET rank">
+                                <div class="invalid-feedback">Please enter a valid rank (greater than 0).</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="quota" class="form-label">Select Quota</label>
+                                <select class="form-select" id="quota" name="quota" required
+                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        title="Select your admission quota">
+                                    <option value="">Select Quota</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a quota.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Select Category</label>
+                                <select class="form-select" id="category" name="category" required
+                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        title="Select your admission category">
+                                    <option value="">Select Category</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a category.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="seat-type" class="form-label">Select Seat Type</label>
+                                <select class="form-select" id="seat-type" name="seat-type" required
+                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        title="Select the seat type">
+                                    <option value="">Select Seat Type</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a seat type.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="round-no" class="form-label">Select Round</label>
+                                <select class="form-select" id="round-no" name="round-no" required
+                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        title="Select the counselling round">
+                                    <option value="">Select Round</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a round.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="min-prob" class="form-label">
+                                    Minimum Admission Probability (%): <span id="prob-value">30</span>
+                                </label>
+                                <input type="range" class="form-range" id="min-prob" name="min-prob"
+                                       min="0" max="100" step="5" value="30"
+                                       data-bs-toggle="tooltip" data-bs-placement="top"
+                                       title="Set the minimum probability threshold for college suggestions">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-row">
+                    <div class="button-group">
+                        <button type="submit" id="generate-btn" class="btn btn-primary btn-lg" data-usage-limit="true">
+                            <span class="button-content">
+                                <i class="fas fa-search"></i> Generate Preferences
+                            </span>
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        </button>
+                        <button type="button" id="download-btn" class="btn btn-secondary btn-lg" disabled>
+                            <i class="fas fa-download"></i> Download Excel
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Loading Overlay -->
+            <div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none">
+                <div class="d-flex flex-column justify-content-center align-items-center h-100">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Generating your preferences...</p>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="output-section" id="output-section" style="display: none;">
+                <h4>College Preferences</h4>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="results-table">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="sortable" data-sort="preference">Preference <i class="fas fa-sort"></i></th>
+                                <th scope="col" class="sortable" data-sort="collegeCode">College Code <i class="fas fa-sort"></i></th>
+                                <th scope="col" class="sortable" data-sort="collegeName">College Name <i class="fas fa-sort"></i></th>
+                                <th scope="col" class="sortable" data-sort="branchCode">Branch Code <i class="fas fa-sort"></i></th>
+                                <th scope="col" class="sortable" data-sort="branchName">Branch Name <i class="fas fa-sort"></i></th>
+                                <th scope="col" class="sortable" data-sort="categoryCode">Category Code <i class="fas fa-sort"></i></th>
+                                <th scope="col" class="sortable" data-sort="cutoffRank">Cutoff Rank <i class="fas fa-sort"></i></th>
+                                <th scope="col" class="sortable" data-sort="cutoffPercentile">Cutoff Percentile <i class="fas fa-sort"></i></th>
+                                <th scope="col" class="sortable" data-sort="probability">Admission Probability (%) <i class="fas fa-sort"></i></th>
+                                <th scope="col" class="sortable" data-sort="chances">Admission Chances <i class="fas fa-sort"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4">
+                    <h4>Probability Distribution</h4>
+                    <div id="plot-container" style="width: 100%; height: 400px;"></div>
+                </div>
+            </div>
+
+            <div class="info-section mt-4">
+                <h3>📚 How to use this tool:</h3>
+                <ol>
+                    <li>Enter your MHTCET rank</li>
+                    <li>Select your quota:
+                        <ul>
+                            <li><strong>General:</strong> General category students</li>
+                            <li><strong>Ladies:</strong> Female candidates</li>
+                            <li><strong>PWD:</strong> Persons with Disability</li>
+                            <li><strong>Defense:</strong> Defense quota</li>
+                            <li><strong>TFWS:</strong> Tuition Fee Waiver Scheme</li>
+                            <li><strong>EWS:</strong> Economically Weaker Section</li>
+                            <li><strong>Orphan:</strong> Orphan quota</li>
+                            <li><strong>Minority:</strong> Minority institutions</li>
+                        </ul>
+                    </li>
+                    <li>Select your category (Open/SC/ST/VJ/NT1/NT2/NT3/OBC/SEBC)</li>
+                    <li>Select seat type:
+                        <ul>
+                            <li><strong>State Level:</strong> State level seats</li>
+                            <li><strong>Home University:</strong> Home university seats</li>
+                            <li><strong>Other than Home University:</strong> Non-home university seats</li>
+                        </ul>
+                    </li>
+                    <li>Choose the counselling round (1, 2, or 3)</li>
+                    <li>Set minimum admission probability threshold</li>
+                    <li>Click on "Generate Preferences"</li>
+                    <li>Use the Download Excel button to save the results</li>
+                </ol>
+
+                <h3>⚠️ Disclaimer:</h3>
+                <ul>
+                    <li>This tool provides suggestions based on previous year's cutoff data</li>
+                    <li>The admission probabilities are estimates based on historical data</li>
+                    <li>The actual cutoffs and admission chances may vary in the current year</li>
+                    <li>This is not an official MHTCET tool and should be used only for reference</li>
+                    <li>Please verify all information from the official MHTCET website</li>
+                    <li>The developers are not responsible for any decisions made based on this tool</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <!-- Authentication initialization script -->
+    <script>
+        // Initialize app - this will be called only after auth verification succeeds
+        window.initializeApp = async function() {
+            console.log('MHTCET App initialized after successful authentication');
+            
+            // Hide loading overlay
+            document.getElementById('auth-loading').style.display = 'none';
+            
+            // Show main content
+            document.getElementById('main-content').style.display = 'block';
+            
+            // Show welcome message if user info is available
+            const alertContainer = document.getElementById('error-alert-container');
+            if (alertContainer && window.AuthVerification && window.AuthVerification.user) {
+                const userEmail = window.AuthVerification.user.email;
+                alertContainer.innerHTML = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <strong>Welcome!</strong> You're logged in as ${userEmail}.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+            }
+            
+            // Initialize main application logic
+            initializeMHTCETApp();
+            
+            console.log('MHTCET App initialized, setting up usage tracking');
+            
+            // Initialize the usage tracking display
+            if (window.FirestoreUsageTracker) {
+                await FirestoreUsageTracker.displayRemainingUses();
+                console.log('Usage tracking initialized');
+                
+                // Apply usage limiting to the generate button
+                const generateBtn = document.getElementById('generate-btn');
+                if (generateBtn) {
+                    FirestoreUsageTracker.applyToButton(generateBtn, function(event) {
+                        return true;
+                    });
+                }
+            } else {
+                console.warn('FirestoreUsageTracker not available');
+            }
+        };
+        
+        // Function to stop all processes if authentication fails
+        window.stopAllProcesses = function() {
+            console.log('Stopping all MHTCET app processes due to authentication failure');
+            
+            // Hide loading overlay
+            document.getElementById('auth-loading').style.display = 'none';
+            
+            // Show error message
+            const alertContainer = document.getElementById('error-alert-container');
+            if (alertContainer) {
+                alertContainer.innerHTML = `
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <strong>Authentication Required:</strong> Please log in through the NextStep website to use this feature.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+            }
+            
+            // Show auth error container
+            document.getElementById('auth-error-container').style.display = 'block';
+            document.getElementById('auth-error-container').innerHTML = `
+                <h2>Authentication Required</h2>
+                <p>Please access this tool through the <a href="https://nextstepedu.co.in">NextStep</a> website.</p>
+            `;
+            
+            // Keep main content hidden
+            document.getElementById('main-content').style.display = 'none';
+        };
+
+        // Function to initialize MHTCET application logic
+        function initializeMHTCETApp() {
+            console.log('MHTCET main application initialized');
+        }
+    </script>
+
+    <!-- Authentication verification script -->
+    <script type="module" src="{{ url_for('static', path='/js/auth-verification.js') }}"></script>
+
+    <!-- Usage limiter scripts -->
+    <script type="module" src="{{ url_for('static', path='/js/usage-limiter.js') }}"></script>
+    <script type="module" src="{{ url_for('static', path='/js/firestore-usage-tracker.js') }}"></script>
+
+    <!-- MHTCET Main application script -->
+    <script src="{{ url_for('static', path='/js/mhtcet-main.js') }}"></script>
+</body>
+</html>
