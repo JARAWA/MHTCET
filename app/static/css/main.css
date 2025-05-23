@@ -1,0 +1,303 @@
+:root {
+    --primary-color: #006B6B;
+    --primary-dark: #005555;
+    --primary-light: #008080;
+    --secondary-color: #D4AF37;
+    --secondary-dark: #B8960C;
+    --secondary-light: #FFD700;
+    --background-color: #f8f9fa;
+    --text-color: #006B6B;
+    --light-text: #ffffff;
+    --error-color: #dc3545;
+    --success-color: #198754;
+    --warning-color: #ffc107;
+}
+
+/* Global Styles */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+/* Header Styles */
+.main-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+}
+
+.main-header h1 {
+    color: var(--light-text);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.main-header h3 {
+    color: var(--secondary-color);
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+    font-size: 1.4rem;
+}
+
+/* Input Section Styles */
+.input-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(212, 175, 55, 0.15);
+    margin-bottom: 2rem;
+    border: 1px solid rgba(212, 175, 55, 0.1);
+}
+
+.form-label {
+    color: var(--primary-color);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.form-control:focus, 
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(0, 107, 107, 0.25);
+}
+
+.form-range::-webkit-slider-thumb {
+    background: var(--primary-color);
+}
+
+.form-range::-moz-range-thumb {
+    background: var(--primary-color);
+}
+
+/* Button Styles */
+.button-row {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: var(--secondary-dark);
+    border-color: var(--secondary-dark);
+    transform: translateY(-2px);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    transform: none !important;
+}
+
+/* Loading Overlay */
+#loading-overlay {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(5px);
+    z-index: 1050;
+}
+
+#loading-overlay p {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+/* Results Section */
+.output-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(212, 175, 55, 0.15);
+    margin-top: 2rem;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
+    border-radius: 8px;
+}
+
+.table th {
+    background-color: var(--primary-color);
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+/* Plot Container */
+#plot-container {
+    border: 1px solid rgba(0, 107, 107, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    background: white;
+}
+
+/* Info Section */
+.info-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    margin-top: 2rem;
+    box-shadow: 0 5px 20px rgba(212, 175, 55, 0.15);
+}
+
+.info-section h3 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.info-section ul li,
+.info-section ol li {
+    margin-bottom: 0.5rem;
+}
+
+/* Error Messages */
+.error-alert {
+    background-color: var(--error-color);
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+/* Tooltips */
+.tooltip {
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .main-header h1 {
+        font-size: 2rem;
+    }
+    
+    .main-header h3 {
+        font-size: 1.2rem;
+    }
+    
+    .button-row {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+    
+    .input-section {
+        padding: 1rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .input-section,
+    .button-row,
+    #loading-overlay {
+        display: none !important;
+    }
+    
+    .output-section {
+        box-shadow: none;
+        padding: 0;
+    }
+    
+    .table th {
+        background-color: #f8f9fa !important;
+        color: black !important;
+    }
+}
+
+/* Table sorting styles */
+.sortable {
+    cursor: pointer;
+    position: relative;
+    padding-right: 20px !important;
+}
+
+.sortable i {
+    position: absolute;
+    right: 5px;
+    color: #999;
+}
+
+.sortable.asc i {
+    color: #000;
+}
+
+.sortable.desc i {
+    color: #000;
+}
+
+.sortable.asc i::before {
+    content: "\f0de" !important;  /* fa-sort-up */
+}
+
+.sortable.desc i::before {
+    content: "\f0dd" !important;  /* fa-sort-down */
+}
+
+.sortable:hover {
+    background-color: #f8f9fa;
+}
+
+/* Add this CSS to your main.css file or inside a <style> tag in the head section */
+nav {
+    margin-bottom: 1.5rem;
+}
+
+nav a {
+    transition: all 0.3s ease;
+}
+
+nav a:hover {
+    opacity: 0.8;
+}
+
+nav a img {
+    height: 32px;
+    width: auto;
+    margin-right: 0.5rem;
+}
+
+nav a span {
+    font-weight: bold;
+    font-size: 1.25rem;
+    color: #333;
+}
